@@ -143,8 +143,7 @@ function parse_input(contents)
   G = lpeg.P {
     formula,
     formula = skip * form * skip * -1;
-    form = Atom;
-    form = Modality * form + symb("(") * form * symb(")") + Atom * Connective * symb("(") * form * symb(")") + neg * form + Atom * Connective * Atom + Atom;
+    form = Modality * form + Atom * Connective * symb("(") * form * symb(")") + symb("(") * form * symb(")") * Connective * form + neg * form + Atom * Connective * Atom + Atom + symb("(") * form * symb(")");
   }
   local t = lpeg.match(G, contents)
   if not t then
