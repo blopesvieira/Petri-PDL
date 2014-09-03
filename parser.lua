@@ -1,38 +1,5 @@
 local lpeg = require "lpeg"
 
-local function table_atom(x)
-  return (string.format("\"%s\"", x))
-end
-
-local function table_formula(f)
-  if f.tag == "Atom" then
-    return("[ Atom "..table_atom(f[1]).." ]")
-  elseif f.tag == "form" then
-    return("[ Imp"..table_formula(f[1])..","..table_formula(f[2]).."]")
-  end
-end
-
-local function table_formulas(t)
-  if #t > 0 then
-    local s = ""
-    for i=1,#t do
-      p = p.." ( "..i..table_formula(t[i]).." ) "
-    end
-  else
-    return(t.tag.."empty")
-  end
-end
-
-print_Goal = function (t)
-  io.write("[ Goal ")
-  if #t > 0 then
-    print_formulas(t[1])
-    io.write(" SEQ ")
-    print_formulas(t[2])
-  end
-  io.write("]")
-end
-
 local function print_ast(t)
   if t.tag == "Goal" then
     print_Goal(t)
@@ -57,17 +24,18 @@ local function table_formula(t)
   end
 end
 
--- Lexical Elements
-local Space = lpeg.S(" \n\t")
-local skip = Space^0
-local Atom = lpeg.C(lpeg.R("AZ")^1) * skip
-
 local function getcontents(filename)
   file = assert(io.open(filename, "r"))
   contents = file:read("*a")
   file:close()
   return contents
 end
+
+-- Lexical Elements
+local Space = lpeg.S(" \n\t")
+local skip = Space^0
+local Atom = lpeg.C(lpeg.R("AZ")^1)
+local place = lpeg.C(lpeg.R("az"))
 
 local function token(pat)
   return pat * skip
@@ -81,18 +49,13 @@ local function symb(str)
   return token (lpeg.P(str))
 end
 
-local function taggedCap(tag, pat)
-  return lpeg.Ct(lpeg.Cg(lpeg.Cc(tag), "tag") * pat)
-end
+local BasicTransition = lpeg.C(place * symb("t1") * place + place * place * symb("t2") * place + place * symb("t3") * place * place)
+
+--local function taggedCap(tag, pat)
+--  return lpeg.Ct(lpeg.Cg(lpeg.Cc(tag), "tag") * pat)
+--end
 
 -- Grammar
-local place = lpeg.R("az")
-local basicPN = lpeg.V("basicPN")
-local BasicTransition = lpeg.P {
-    basicPN,
-    basicPN = place * symb("t1") * place + place * place * symb("t2") * place + place * symb("t3") * place * place;
-  }
-
 local composedPN = lpeg.V("composedPN")
 local PetriNetProgram = lpeg.P {
     composedPN,
@@ -143,7 +106,7 @@ function parse_input(contents)
   G = lpeg.P {
     formula,
     formula = skip * form * skip * -1;
-    form = Modality * form + Atom * Connective * symb("(") * form * symb(")") + symb("(") * form * symb(")") * Connective * form + neg * form + Atom * Connective * Atom + Atom + symb("(") * form * symb(")");
+    form = lpeg.C(Modality) * form + Atom * lpeg.C(Connective) * symb("(") * form * symb(")") + symb("(") * form * symb(")") * lpeg.C(Connective) * form + lpeg.C(neg) * form + Atom * lpeg.C(Connective) * Atom + Atom + symb("(") * form * symb(")");
   }
   local t = lpeg.match(G, contents)
   if not t then
