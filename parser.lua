@@ -32,10 +32,14 @@ local function getcontents(filename)
 end
 
 -- Lexical Elements
+local function taggedCap(tag, pat)
+  return lpeg.Ct(lpeg.Cg(lpeg.Cc(tag), "tag") * pat)
+end
+
 local Space = lpeg.S(" \n\t")
 local skip = Space^0
-local Atom = lpeg.C(lpeg.R("AZ")^1)
-local place = lpeg.C(lpeg.R("az"))
+local Atom = taggedCap("Atom", lpeg.R("AZ")^1)
+local place = taggedCap("Place", lpeg.R("az"))
 
 local function token(pat)
   return pat * skip
@@ -49,11 +53,7 @@ local function symb(str)
   return token (lpeg.P(str))
 end
 
-local BasicTransition = lpeg.C(place * symb("t1") * place + place * place * symb("t2") * place + place * symb("t3") * place * place)
-
---local function taggedCap(tag, pat)
---  return lpeg.Ct(lpeg.Cg(lpeg.Cc(tag), "tag") * pat)
---end
+local BasicTransition = taggedCap("BasicTransition", place * symb("t1") * place + place * place * symb("t2") * place + place * symb("t3") * place * place)
 
 -- Grammar
 local composedPN = lpeg.V("composedPN")
@@ -105,8 +105,8 @@ function parse_input(contents)
   local form = lpeg.V("form")
   G = lpeg.P {
     formula,
-    formula = skip * form * skip * -1;
-    form = lpeg.C(Modality) * form + Atom * lpeg.C(Connective) * symb("(") * form * symb(")") + symb("(") * form * symb(")") * lpeg.C(Connective) * form + lpeg.C(neg) * form + Atom * lpeg.C(Connective) * Atom + Atom + symb("(") * form * symb(")");
+    formula = skip * form * skip;
+    form = taggedCap("Modality", Modality) * form + Atom * taggedCap("Connective", Connective) * symb("(") * form * symb(")") + symb("(") * form * symb(")") * taggedCap("Connective", Connective) * form + taggedCap("Neg", neg) * form + Atom * taggedCap("Connective", Connective) * Atom + Atom + symb("(") * form * symb(")");
   }
   local t = lpeg.match(G, contents)
   if not t then
