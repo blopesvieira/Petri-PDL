@@ -40,6 +40,7 @@ local Space = lpeg.S(" \n\t")
 local skip = Space^0
 local Atom = taggedCap("Atom", lpeg.R("AZ")^1)
 local place = taggedCap("Place", lpeg.R("az"))
+local neg = taggedCap("Neg", symb("~"))
 
 local function token(pat)
   return pat * skip
@@ -77,13 +78,13 @@ local MarkedPetriNetProgram = lpeg.P {
 local dmodality = lpeg.V("dmodality")
 local DModality = lpeg.P {
     dmodality,
-    dmodality = symb("<") * skip * MarkedPetriNetProgram * skip * symb(">");
+    dmodality = taggedCap("BDia", symb("<")) * skip * MarkedPetriNetProgram * skip * taggedCap("EDia", symb(">"));
   }
 
 local bmodality = lpeg.V("bmodality")
 local BModality = lpeg.P {
     bmodality,
-    bmodality = symb("[") * skip * MarkedPetriNetProgram * skip * symb("]");
+    bmodality = taggedCap("BBox", symb("[")) * skip * MarkedPetriNetProgram * skip * taggedCap("EBox", symb("]"));
   }
 
 local modality = lpeg.V("modality")
@@ -95,10 +96,8 @@ local Modality = lpeg.P {
 local connective = lpeg.V("connective")
 local Connective = lpeg.P {
     connective,
-    connective = symb ("&") + symb("|") + symb("->");
+    connective = taggedCap("Connective", symb ("&") + symb("|") + symb("->"));
   }
-
-local neg = symb("~")
 
 function parse_input(contents)
   local formula = lpeg.V("formula")
@@ -106,7 +105,7 @@ function parse_input(contents)
   G = lpeg.P {
     formula,
     formula = skip * form * skip;
-    form = taggedCap("Modality", Modality) * form + Atom * taggedCap("Connective", Connective) * symb("(") * form * symb(")") + symb("(") * form * symb(")") * taggedCap("Connective", Connective) * form + taggedCap("Neg", neg) * form + Atom * taggedCap("Connective", Connective) * Atom + Atom + symb("(") * form * symb(")");
+    form = Modality * form + Atom * Connective * symb("(") * form * symb(")") + symb("(") * form * symb(")") * Connective * form + neg * form + Atom * Connective * Atom + Atom + symb("(") * form * symb(")");
   }
   local t = lpeg.match(G, contents)
   if not t then
